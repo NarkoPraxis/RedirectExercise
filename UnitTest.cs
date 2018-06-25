@@ -12,168 +12,161 @@ namespace RedirectUnitTests
     [TestClass]
     public class RouteGraphTests
     {
-
-
-        /// <summary>
-        /// The current graph being used for testing
-        /// </summary>
-        RouteGraph _routeGraph = new RouteGraph();
-
-        //sets up a test before running it.
-        public void SetupForTest(List<List<int>> initialGraph, Dictionary<string, int> identifiers) {
-            _routeGraph = new RouteGraph(initialGraph, identifiers);
-        }
-
+		/// <summary>
+		/// Tests with basic input, nothing special
+		/// </summary>
         [TestMethod]
         public void ProcessSimpleInputTest() {
-            try {
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(sampleInput);
-                CompareGraphs(finishedSampleInputGraph);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
+           TestProcessWith(sampleInput, finishedSampleInputGraph);
         }
 
+		/// <summary>
+		/// Tests with larger, but still basic input
+		/// </summary>
         [TestMethod]
         public void ProcessLargerInput() {
-            try {
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(largerInput);
-                CompareGraphs(finishedLargerInputGraph);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
+            TestProcessWith(largerInput, finishedLargerInputGraph);
         }
 
         /// <summary>
-        /// Tests from beginning to end that larger correct input can be processed correctly,
-        /// </summary>
-        [TestMethod]
-        public void ProcessLargestInput() {
-            try {
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(LargestTestInput);
-                CompareGraphs(finishedLargestTestGraph);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
-        }
-
-        /// <summary>
-        /// Tests from beginning to end that correct input can be processed correctly,
+        /// the order of the routes has been re-ordered
         /// </summary>
         [TestMethod]
         public void ProcessShuffledInput() {
-            try {
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(shuffledInput);
-                CompareGraphs(finishedShuffledInput);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
+			TestProcessWith(shuffledInput, finishedShuffledGraph);
         }
 
         /// <summary>
-        /// Tests from beginning to end that larger correct input can be processed correctly,
+        /// there are more routes that have been shuffled more
         /// </summary>
         [TestMethod]
         public void ProcessLargerShuffledInput() {
-            try {
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(largerShuffledInput);
-                CompareGraphs(finishedLargerShuffledGraph);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
+			TestProcessWith(largerShuffledInput, finishedLargerShuffledGraph);
         }
 
+		/// <summary>
+		/// one route with multiple reroutes, not sure if this is testing valid input
+		/// or invalid input yet, need to ask
+		/// </summary>
+		[TestMethod]
+		public void SplitRouteInputTest() {
+			TestProcessWith(shuffledInput, finishedShuffledGraph);
+		}
 
+		/// <summary>
+		/// largest, most complicated input test, order has been rearranged and
+		/// some input is given multiple reroutes
+		/// </summary>
+		[TestMethod]
+		public void ProcessLargestInput() {
+			TestProcessWith(LargestTestInput, finishedLargestTestGraph);
+		}
 
-        /// <summary>
-        /// Tests the if the RouteGraph.MapPath() to see if a single line can be added correctly
-        /// Does this happen as i expect?
-        /// </summary>
-        [TestMethod]
+		/// <summary>
+		/// edge detection, what happens when the input is small and has a duplicate
+		/// </summary>
+		[TestMethod]
+		public void ProcessSmallestInput() {
+			TestProcessWith(smallestTestInput, finishedSmallestTestGraph);
+		}
+
+		/// <summary>
+		/// Tests the RouteGraph.MapPath() to see if a single line can be added correctly
+		/// </summary>
+		[TestMethod]
         public void MapPathTest() {
-            SetupForTest(midProcessGraph, midProcessIdentifiers);
-            _routeGraph.MapPath("/about-us.html -> /about");
-            CompareGraphs(midProcessFinishedGraph);
-            
+            RouteGraph routeGraph = new RouteGraph(midProcessGraph, midProcessIdentifiers);
+			RouteGraph testGraph = new RouteGraph(midProcessFinishedGraph, null);
+			routeGraph.MapPath("/about-us.html -> /about");
+			routeGraph.Equals(testGraph);
         }
 
         /// <summary>
         /// This tests wether or not I can determine if a given input
-        /// would create a cirular dependancy. I need to write specific tests, but
-        /// I don't understand enough about how to do this yet.
-        /// 
-        /// validate this.
+        /// would create a cirular dependancy. 
+        /// A circular Dependancy is defined as any route that eventually routes to itself
         /// </summary>
         [TestMethod]
         public void IsCircularReferenceTest() {
-            _routeGraph = new RouteGraph();
-            try {
-                _routeGraph.Process(invalidInput);
-            }
-            catch (ArgumentException exc) {
-                Assert.IsTrue(exc.GetType() == typeof(ArgumentException));
-                return;
-            }
-            Assert.Fail();
-        }
+			TestProcessThrowsExceptionWith(invalidInput);
+		}
 
-        [TestMethod]
+		/// <summary>
+		/// This test a circular dependancy with other routes between the 
+		/// ends of the chain of redirects
+		/// </summary>
+		[TestMethod]
         public void IsCircularChainReferenceTest() {
-            _routeGraph = new RouteGraph();
-            try {
-                _routeGraph.Process(invalidChainInput);
-            }
-            catch (ArgumentException exc) {
-                Assert.IsTrue(exc.GetType() == typeof(ArgumentException));
-                return;
-            }
-            Assert.Fail();
+			TestProcessThrowsExceptionWith(invalidChainInput);
         }
 
-        [TestMethod]
-        public void SplitRouteInputTest() {
-            try { 
-                _routeGraph = new RouteGraph();
-                _routeGraph.Process(shuffledInput);
-                CompareGraphs(finishedShuffledInput);
-            }
-            catch (Exception e) {
-                Assert.Fail();
-            }
-        }
-
-
+		/// <summary>
+		/// tests if the output graph can be parsed back into the expected output
+		/// </summary>
         [TestMethod]
         public void TraverseGraphTest() {
-            SetupForTest(finishedSampleInputGraph, finishedSampleInputIdentifiers);
-            List<string> traversalResult = _routeGraph.TraverseGraph();
+            RouteGraph routeGraph = new RouteGraph(finishedSampleInputGraph, finishedSampleInputIdentifiers);
+            List<string> traversalResult = routeGraph.TraverseGraph();
             for (int i = 0; i < traversalResult.Count; i++) {
                 Assert.IsTrue(traversalResult[i].Equals(sampleOutput[i]));
             }
         }
 
-        private void CompareGraphs(List<List<int>> testGraph)
+
+		/// <summary>
+		/// tests if the Equals method can be expected to return valid results
+		/// </summary>
+		[TestMethod]
+        public void CompareGraphs()
         {
-            for (int i = 0; i < _routeGraph.Graph.Count; i++) {
-                List<int> path = _routeGraph.Graph[i];
-                for (int k = 0; k < path.Count; k++) {
-                    Assert.AreEqual(path[k], testGraph[i][k]);
-                }
+			RouteGraph one = new RouteGraph(finishedSampleInputGraph, null);
+			RouteGraph two = new RouteGraph(finishedLargestTestGraph, null);
+			RouteGraph three = new RouteGraph(finishedShuffledGraph, null);
+
+			Assert.IsTrue(one.Equals(one));
+			Assert.IsTrue(two.Equals(two));
+			Assert.IsTrue(three.Equals(three));
+			Assert.IsFalse(one.Equals(two));
+			Assert.IsFalse(one.Equals(three));
+			Assert.IsFalse(two.Equals(three));
+        }
+
+		/// <summary>
+		/// Used for running tests on the process function
+		/// </summary>
+		/// <param name="input">input to be processed</param>
+		/// <param name="output">graph to be validated</param>
+        private void TestProcessWith(List<string> input, List<List<int>> output) {
+            try {
+                RouteGraph routeGraph = new RouteGraph();
+				RouteGraph testGraph = new RouteGraph(output, null);
+                routeGraph.Process(input);
+				routeGraph.Equals(testGraph);
+            }
+            catch (Exception exc) {
+                Assert.Fail(exc.Message);
             }
         }
 
-        #region Lists for testing
-        List<string> sampleInput = new List<string>() {
+		/// <summary>
+		/// Used for running tests when the process is supposed to throw and exception
+		/// </summary>
+		/// <param name="input">input to be processed</param>
+		private void TestProcessThrowsExceptionWith(List<string> input) {
+			RouteGraph routeGraph = new RouteGraph();
+			try {
+				routeGraph.Process(input);
+			}
+			catch (ArgumentException exc) {
+				Assert.IsTrue(exc.GetType() == typeof(ArgumentException));
+				return;
+			}
+			Assert.Fail("Test should have thrown an ArgumentException, it did not");
+		}
+
+		// This region contains all of the data structures needed for running the tests
+		#region Lists for testing
+		List<string> sampleInput = new List<string>() {
             "/home",
             "/our-ceo.html -> /about-us.html",
             "/about-us.html -> /about",
@@ -222,7 +215,7 @@ namespace RedirectUnitTests
             "/product-1.html -> /seo -> /google",
         };
 
-        List<List<int>> finishedShuffledInput = new List<List<int>>() {
+        List<List<int>> finishedShuffledGraph = new List<List<int>>() {
             new List<int>() {3, 4, 0, 1, 2},
         };
 
@@ -303,7 +296,15 @@ namespace RedirectUnitTests
             new List<int>() {3, 4},
         };
 
+		List<string> smallestTestInput = new List<string>() {
+			"/kitchen",
+			"/kitchen",
+		};
+
+		List<List<int>> finishedSmallestTestGraph = new List<List<int>> {
+			new List<int>() {0 }
+		};
+
         #endregion
     }
 }
-

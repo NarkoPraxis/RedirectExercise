@@ -1,53 +1,63 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RedirectsExercise
 {
+	/// <summary>
+	/// takes a list of routes and prints out teh paths in the application without any duplicates
+	/// </summary>
     public class RouteGraph : RouteAnalyzer
     {
-        public List<List<int>> Graph { get; set; } = new List<List<int>>();
-        public Dictionary<string, int> Identifiers { get; set; } = new Dictionary<string, int>();
+        private List<List<int>> Graph { get; set; } = new List<List<int>>();
+        private Dictionary<string, int> _identifiers { get; set; } = new Dictionary<string, int>();
 
-        private int uniqueIdentifier = 0;
-        private string[] delimiters = { "->", " "};
+        private int _uniqueIdentifier = 0;
+        private static string[] _delimiters = { "->", " "};
 
-        public RouteGraph() {
+		private const string _circularPathMessage = "Circular Path Detected";
 
-        }
+        public RouteGraph() { }
     
-        //I have to inject these values for the class to be unit testable... 
+        //This constructor allows the class to be unit testable
         public RouteGraph(List<List<int>> graph, Dictionary<string, int> identifiers) {
             Graph = graph;
-            Identifiers = identifiers;
-            uniqueIdentifier = identifiers.Count;
+			if (identifiers != null) {
+				_identifiers = identifiers;
+				_uniqueIdentifier = identifiers.Count;
+			}
         }
 
-        public IEnumerable<string> Process(IEnumerable<string> routes) {
+		/// <summary>
+		/// Processes a list of URL redirects and creates a simplified list of route paths
+		/// </summary>
+		public IEnumerable<string> Process(IEnumerable<string> routes) {
             foreach (string path in routes) {
                 MapPath(path);
             }
             return TraverseGraph();
         }
 
+		/// <summary>
+		/// Maps a path into the graph of paths
+		/// </summary>
+		/// <param name="path"></param>
+		/// <exception cref="ArgumentException">Thrown if a given route path creates a circular reroute path</exception>
         public void MapPath(string path) { 
             List<string> routeNames = ParseRoutes(path);
             //if the end of this route path already exists in the graph
-            if (Identifiers.Keys.Contains(routeNames[routeNames.Count - 1])) {
-                int id = Identifiers[routeNames[routeNames.Count - 1]];
+            if (_identifiers.Keys.Contains(routeNames[routeNames.Count - 1])) {
+                int id = _identifiers[routeNames[routeNames.Count - 1]];
                 int pathIndex = GetPathIndex(id);
 
                 //add the new path to the graph
                 Graph.Add(new List<int>());
                 for (int i = 0; i < routeNames.Count - 1; i++) {
                     if (CreatesCircularReference(routeNames[i], pathIndex)) {
-                        throw new ArgumentException("Circular Path Detected, infinite loop eminent");
+                        throw new ArgumentException(_circularPathMessage);
                     }
                     else {
-                        Identifiers[routeNames[i]] = uniqueIdentifier;
-                        Graph[EndGraphIndex].Add(uniqueIdentifier++);
+						AddRoute(routeNames[i], EndGraphIndex);
                     }
                 }
                 //add the old path on the end of the graph
@@ -58,31 +68,44 @@ namespace RedirectsExercise
                 Graph.RemoveAt(pathIndex);
             }
             //if the beginning of this route path already exists in the graph
-            else if (Identifiers.Keys.Contains(routeNames[0])) {
-                int id = Identifiers[routeNames[0]];
+            else if (_identifiers.Keys.Contains(routeNames[0])) {
+                int id = _identifiers[routeNames[0]];
                 int pathIndex = GetPathIndex(id);
 
                 for (int i = 1; i < routeNames.Count; i++) {
                     if (CreatesCircularReference(routeNames[i], pathIndex)) { 
-                        throw new ArgumentException("Circular Path Detected, infinite loop eminent");
+                        throw new ArgumentException(_circularPathMessage);
                     }
                     else {
-                        Identifiers[routeNames[i]] = uniqueIdentifier;
-                        Graph[pathIndex].Add(uniqueIdentifier++);
-                    }
-                }
+						AddRoute(routeNames[i], pathIndex);
+					}
+				}
             }
             //this route path is unique
             else {
                 Graph.Add(new List<int>());
                 foreach (string route in routeNames) {
-                    Identifiers[route] = uniqueIdentifier;
-                    Graph[EndGraphIndex].Add(uniqueIdentifier++);
+					AddRoute(route, EndGraphIndex);
                 }
             }
         }
 
-        public int GetPathIndex(int id) {
+		/// <summary>
+		/// Adds a route to the graph
+		/// </summary>
+		/// <param name="routeName">the name of the route</param>
+		/// <param name="pathIndex">the index of the path to be added too</param>
+		private void AddRoute(string routeName, int pathIndex) {
+			_identifiers[routeName] = _uniqueIdentifier;
+			Graph[pathIndex].Add(_uniqueIdentifier++);
+		}
+
+		/// <summary>
+		/// Gets the path where the given id is stored in the graph
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns>index of path if found, -1 if unfound</returns>
+		public int GetPathIndex(int id) {
             for (int i = 0; i < Graph.Count; i++) {
                 List<int> path = Graph[i];
                 if (path.Contains(id)) {
@@ -92,6 +115,10 @@ namespace RedirectsExercise
             return -1; // couldn't find path, return invalid path index
         }
 
+		/// <summary>
+		/// Gets the graph as a list of strings
+		/// </summary>
+		/// <returns>a list of strings representing all the reroute paths</returns>
         public List<string> TraverseGraph() {
             List<string> output = new List<string>();
             string redirects = "";
@@ -99,7 +126,7 @@ namespace RedirectsExercise
             foreach(List<int> path in Graph) {
                 List<string> pathNames = new List<string>();
                 foreach (int id in path) {
-                    pathNames.Add(Identifiers.Single(o => o.Value == id).Key);
+                    pathNames.Add(_identifiers.Single(o => o.Value == id).Key);
                 }
                 redirects = string.Join(" -> ", pathNames);
                 output.Add(redirects);
@@ -107,19 +134,54 @@ namespace RedirectsExercise
             return output;
         }
         
+		/// <summary>
+		/// Test if adding a given route name to the path would create a circular reference
+		/// </summary>
+		/// <param name="routeName">the route name to be added</param>
+		/// <param name="pathIndex">the index of the path where it will be added</param>
+		/// <returns>True if it is unsafe, false if it is safe</returns>
         public bool CreatesCircularReference(string routeName, int pathIndex) {
-            if (Identifiers.Keys.Contains(routeName)) {
-                int id = Identifiers[routeName];
-                return Graph[pathIndex].Contains(Identifiers[routeName]);
+            if (_identifiers.Keys.Contains(routeName)) {
+                int id = _identifiers[routeName];
+                return Graph[pathIndex].Contains(_identifiers[routeName]);
             }
             return false;
         }
         
-        public List<string> ParseRoutes(string path) {
-            return path.Split(delimiters, System.StringSplitOptions.RemoveEmptyEntries).ToList(); 
+		/// <summary>
+		/// Splits a path into a usable list
+		/// </summary>
+		/// <param name="path">the input path</param>
+		/// <returns>the outpute list of strings from the path</returns>
+        public static List<string> ParseRoutes(string path) {
+            return path.Split(_delimiters, System.StringSplitOptions.RemoveEmptyEntries).ToList(); 
         }
 
-        public int EndGraphIndex {
+		/// <summary>
+		/// Test wether or not two graphs are equal to eachother, 
+		/// used for unit testing
+		/// </summary>
+		/// <param name="routeGraph">the graph to be compared against</param>
+		/// <returns>True if equal, false if not</returns>
+		public bool Equals(RouteGraph routeGraph) {
+			if (routeGraph == null || routeGraph.Graph == null) {
+				return false;
+			}
+			for (int i = 0; i < routeGraph.Graph.Count; i++) {
+				List<int> path = routeGraph.Graph[i];
+				for (int k = 0; k < path.Count; k++) {
+					if (!path[k].Equals(Graph[i][k])) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		/// <summary>
+		/// a short hand property to make code more readable
+		/// </summary>
+        private int EndGraphIndex {
             get {
                 return Graph.Count - 1;
             }
