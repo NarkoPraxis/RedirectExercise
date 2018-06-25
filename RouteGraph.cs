@@ -85,7 +85,7 @@ namespace RedirectsExercise
         public int GetPathIndex(int id) {
             for (int i = 0; i < Graph.Count; i++) {
                 List<int> path = Graph[i];
-                if (id == path[path.Count - 1] || id < path[path.Count - 1]) {
+                if (path.Contains(id)) {
                     return i;
                 }
             }
@@ -95,8 +95,13 @@ namespace RedirectsExercise
         public List<string> TraverseGraph() {
             List<string> output = new List<string>();
             string redirects = "";
+                   
             foreach(List<int> path in Graph) {
-                redirects = string.Join(" <- ", path);
+                List<string> pathNames = new List<string>();
+                foreach (int id in path) {
+                    pathNames.Add(Identifiers.Single(o => o.Value == id).Key);
+                }
+                redirects = string.Join(" -> ", pathNames);
                 output.Add(redirects);
             }
             return output;

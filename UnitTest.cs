@@ -24,8 +24,6 @@ namespace RedirectUnitTests
             _routeGraph = new RouteGraph(initialGraph, identifiers);
         }
 
-        
-
         [TestMethod]
         public void ProcessSimpleInputTest() {
             try {
@@ -51,6 +49,21 @@ namespace RedirectUnitTests
         }
 
         /// <summary>
+        /// Tests from beginning to end that larger correct input can be processed correctly,
+        /// </summary>
+        [TestMethod]
+        public void ProcessLargestInput() {
+            try {
+                _routeGraph = new RouteGraph();
+                _routeGraph.Process(LargestTestInput);
+                CompareGraphs(finishedLargestTestGraph);
+            }
+            catch (Exception e) {
+                Assert.Fail();
+            }
+        }
+
+        /// <summary>
         /// Tests from beginning to end that correct input can be processed correctly,
         /// </summary>
         [TestMethod]
@@ -66,7 +79,24 @@ namespace RedirectUnitTests
         }
 
         /// <summary>
-        /// Tests the if the RouteGraph.Insert() function can find the right posi
+        /// Tests from beginning to end that larger correct input can be processed correctly,
+        /// </summary>
+        [TestMethod]
+        public void ProcessLargerShuffledInput() {
+            try {
+                _routeGraph = new RouteGraph();
+                _routeGraph.Process(largerShuffledInput);
+                CompareGraphs(finishedLargerShuffledGraph);
+            }
+            catch (Exception e) {
+                Assert.Fail();
+            }
+        }
+
+
+
+        /// <summary>
+        /// Tests the if the RouteGraph.MapPath() to see if a single line can be added correctly
         /// Does this happen as i expect?
         /// </summary>
         [TestMethod]
@@ -97,6 +127,41 @@ namespace RedirectUnitTests
             Assert.Fail();
         }
 
+        [TestMethod]
+        public void IsCircularChainReferenceTest() {
+            _routeGraph = new RouteGraph();
+            try {
+                _routeGraph.Process(invalidChainInput);
+            }
+            catch (ArgumentException exc) {
+                Assert.IsTrue(exc.GetType() == typeof(ArgumentException));
+                return;
+            }
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        public void SplitRouteInputTest() {
+            try { 
+                _routeGraph = new RouteGraph();
+                _routeGraph.Process(shuffledInput);
+                CompareGraphs(finishedShuffledInput);
+            }
+            catch (Exception e) {
+                Assert.Fail();
+            }
+        }
+
+
+        [TestMethod]
+        public void TraverseGraphTest() {
+            SetupForTest(finishedSampleInputGraph, finishedSampleInputIdentifiers);
+            List<string> traversalResult = _routeGraph.TraverseGraph();
+            for (int i = 0; i < traversalResult.Count; i++) {
+                Assert.IsTrue(traversalResult[i].Equals(sampleOutput[i]));
+            }
+        }
+
         private void CompareGraphs(List<List<int>> testGraph)
         {
             for (int i = 0; i < _routeGraph.Graph.Count; i++) {
@@ -115,13 +180,26 @@ namespace RedirectUnitTests
             "/product-1.html -> /seo"
         };
 
+        List<string> sampleOutput = new List<string>() {
+            "/home",
+            "/our-ceo.html -> /about-us.html -> /about",
+            "/product-1.html -> /seo"
+        };
+
         List<List<int>> finishedSampleInputGraph = new List<List<int>>() {
             new List<int>() {0 },
             new List<int>() {1, 2, 3 },
             new List<int>() {4, 5 }
         };
 
-      
+        Dictionary<string, int> finishedSampleInputIdentifiers = new Dictionary<string, int> {
+            { "/home", 0},
+            { "/our-ceo.html", 1 },
+            { "/about-us.html", 2 },
+            { "/about", 3 },
+            { "/product-1.html", 4 },
+            { "/seo", 5 }
+        };
 
         List<string> largerInput = new List<string>() {
             "/home -> /kitchen",
@@ -148,9 +226,30 @@ namespace RedirectUnitTests
             new List<int>() {3, 4, 0, 1, 2},
         };
 
+        List<string> largerShuffledInput = new List<string>() {
+            "/kitchen ->/sink -> /dishes",
+            "/home -> /kitchen",
+            "/faq -> /info",
+            "/about-us.html -> /about -> /faq",
+            "/our-ceo.html -> /about-us.html",
+            "/google -> /images -> /filter",
+            "/product-1.html -> /seo -> /google",
+        };
+
+        List<List<int>> finishedLargerShuffledGraph = new List<List<int>>() {
+            new List<int>() {3, 0, 1, 2},
+            new List<int>() {8, 6, 7, 4, 5},
+            new List<int>() {12, 13, 9, 10, 11}
+        };
+
         List<string> invalidInput = new List<string>() {
             "/info -> /faq",
             "/faq -> /info",
+        };
+
+        List<string> invalidChainInput = new List<string>() {
+            "/faq -> /chain -> /info",
+            "/info -> /secondchain -> /faq",
         };
 
         Dictionary<string, int> midProcessIdentifiers = new Dictionary<string, int> {
@@ -159,8 +258,18 @@ namespace RedirectUnitTests
             { "/about-us.html", 2 }
         };
 
+        List<string> splitInput = new List<string>() {
+            "/info -> /faq",
+            "/about-us.html -> /about -> /info",
+            "/info -> /fail",
+            "/info -> /git-gud"
+        };
 
-      List<List<int>> midProcessGraph = new List<List<int>>() {
+        List<List<int>> finishedSplitInput = new List<List<int>>() {
+            new List<int>() {2, 3, 0, 1, 4, 5 }
+        };
+
+        List<List<int>> midProcessGraph = new List<List<int>>() {
             new List<int>() {0,},
             new List<int>() {1, 2},
         };
@@ -170,8 +279,31 @@ namespace RedirectUnitTests
             new List<int>() {1, 2, 3},
         };
 
+        List<string> LargestTestInput = new List<string> {
+            "/kitchen ->/sink -> /dishes",
+            "/home -> /kitchen",
+            "/faq -> /info",
+            "/about-us.html -> /about -> /faq",
+            "/our-ceo.html -> /about-us.html",
+            "/google -> /images -> /filter",
+            "/product-1.html -> /seo -> /google",
+            "/faq -> /split",
+            "/info -> /fail",
+            "/info -> /git-gud"
+        };
 
+        List<List<int>> finishedLargestTestGraph = new List<List<int>>() {
+            new List<int>() {3, 0, 1, 2},
+            new List<int>() {8, 6, 7, 4, 5, 14, 15, 16},
+            new List<int>() {12, 13, 9, 10, 11}
+        };
+
+        List<List<int>> finishedDuplicatesGraph = new List<List<int>> {
+            new List<int>() {0, 1, 2},
+            new List<int>() {3, 4},
+        };
 
         #endregion
     }
 }
+
