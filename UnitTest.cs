@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RedirectsExercise;
@@ -140,18 +141,11 @@ namespace RedirectUnitTests
 
         List<string> shuffledInput = new List<string>() {
             "/google -> /images -> /filter",
-            "/our-ceo.html -> /about-us.html",
-            "/kitchen -> /sink -> /dishes",
             "/product-1.html -> /seo -> /google",
-            "/about-us.html -> /about -> /faq",
-            "/faq -> /info",
-            "/home -> /kitchen",
         };
 
         List<List<int>> finishedShuffledInput = new List<List<int>>() {
-            new List<int>() {4, 5, 6, 7, 8},
-            new List<int>() {9, 10, 11, 12, 13},
-            new List<int>() {0, 1, 2, 3},
+            new List<int>() {3, 4, 0, 1, 2},
         };
 
         List<string> invalidInput = new List<string>() {
