@@ -34,34 +34,9 @@ namespace RedirectsExercise
 
         public void MapPath(string path) { 
             List<string> routeNames = ParseRoutes(path);
-            //if the end of this route path already exists in the graph
-            if (Identifiers.Keys.Contains(routeNames[routeNames.Count - 1])) {
-                int id = Identifiers[routeNames[routeNames.Count - 1]];
-                int pathIndex = GetPathIndex(id);
-
-                //add the new path to the graph
-                Graph.Add(new List<int>());
-                for (int i = 0; i < routeNames.Count - 1; i++) {
-                    if (CreatesCircularReference(routeNames[i], pathIndex)) {
-                        throw new ArgumentException("Circular Path Detected, infinite loop eminent");
-                    }
-                    else {
-                        Identifiers[routeNames[i]] = uniqueIdentifier;
-                        Graph[EndGraphIndex].Add(uniqueIdentifier++);
-                    }
-                }
-                //add the old path on the end of the graph
-                foreach(int routeID in Graph[pathIndex]) {
-                    Graph[EndGraphIndex].Add(routeID);
-                }
-                //remove the old path
-                Graph.RemoveAt(pathIndex);
-            }
-            //if the beginning of this route path already exists in the graph
-            else if (Identifiers.Keys.Contains(routeNames[0])) {
+            if (Identifiers.Keys.Contains(routeNames[0])) {
                 int id = Identifiers[routeNames[0]];
                 int pathIndex = GetPathIndex(id);
-
                 for (int i = 1; i < routeNames.Count; i++) {
                     if (CreatesCircularReference(routeNames[i], pathIndex)) { 
                         throw new ArgumentException("Circular Path Detected, infinite loop eminent");
@@ -72,7 +47,6 @@ namespace RedirectsExercise
                     }
                 }
             }
-            //this route path is unique
             else {
                 Graph.Add(new List<int>());
                 foreach (string route in routeNames) {
@@ -85,11 +59,14 @@ namespace RedirectsExercise
         public int GetPathIndex(int id) {
             for (int i = 0; i < Graph.Count; i++) {
                 List<int> path = Graph[i];
-                if (id == path[path.Count - 1] || id < path[path.Count - 1]) {
+                if (id == path[path.Count - 1]) {
                     return i;
                 }
+                else if (id < path[path.Count - 1]) {
+                    throw new ArgumentException("Split Path Detected, can't redirect to two different URL's at the same time");
+                }
             }
-            return -1; // couldn't find path, return invalid path index
+            return -1; // should never reach here.
         }
 
         public List<string> TraverseGraph() {
