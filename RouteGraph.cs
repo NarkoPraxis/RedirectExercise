@@ -15,8 +15,6 @@ namespace RedirectsExercise
         private int _uniqueIdentifier = 0;
         private static string[] _delimiters = { "->", " "};
 
-		private const string _circularPathMessage = "Circular Path Detected";
-
         public RouteGraph() { }
     
         //This constructor allows the class to be unit testable
@@ -46,19 +44,15 @@ namespace RedirectsExercise
         public void MapPath(string path) { 
             List<string> routeNames = ParseRoutes(path);
             //if the end of this route path already exists in the graph
-            if (_identifiers.Keys.Contains(routeNames[routeNames.Count - 1])) {
+            if (_identifiers.ContainsKey(routeNames[routeNames.Count - 1])) {
                 int id = _identifiers[routeNames[routeNames.Count - 1]];
                 int pathIndex = GetPathIndex(id);
 
                 //add the new path to the graph
                 Graph.Add(new List<int>());
                 for (int i = 0; i < routeNames.Count - 1; i++) {
-                    if (CreatesCircularReference(routeNames[i], pathIndex)) {
-                        throw new ArgumentException(_circularPathMessage);
-                    }
-                    else {
-						AddRoute(routeNames[i], EndGraphIndex);
-                    }
+					ValidateRoute(routeNames[i], pathIndex);
+					AddRoute(routeNames[i], EndGraphIndex);
                 }
                 //add the old path on the end of the graph
                 foreach(int routeID in Graph[pathIndex]) {
@@ -68,23 +62,22 @@ namespace RedirectsExercise
                 Graph.RemoveAt(pathIndex);
             }
             //if the beginning of this route path already exists in the graph
-            else if (_identifiers.Keys.Contains(routeNames[0])) {
+            else if (_identifiers.ContainsKey(routeNames[0])) {
                 int id = _identifiers[routeNames[0]];
                 int pathIndex = GetPathIndex(id);
 
+				ValidateSplitPath(routeNames[0]);
+
                 for (int i = 1; i < routeNames.Count; i++) {
-                    if (CreatesCircularReference(routeNames[i], pathIndex)) { 
-                        throw new ArgumentException(_circularPathMessage);
-                    }
-                    else {
-						AddRoute(routeNames[i], pathIndex);
-					}
+					ValidateRoute(routeNames[i], pathIndex);
+					AddRoute(routeNames[i], pathIndex);
 				}
             }
             //this route path is unique
             else {
                 Graph.Add(new List<int>());
                 foreach (string route in routeNames) {
+					ValidateSplitPath(route);
 					AddRoute(route, EndGraphIndex);
                 }
             }
@@ -98,6 +91,11 @@ namespace RedirectsExercise
 		private void AddRoute(string routeName, int pathIndex) {
 			_identifiers[routeName] = _uniqueIdentifier;
 			Graph[pathIndex].Add(_uniqueIdentifier++);
+		}
+
+		private void ValidateRoute(string routeName, int pathIndex) {
+			ValidateCircularPath(routeName, pathIndex);
+			ValidateSplitPath(routeName);
 		}
 
 		/// <summary>
@@ -140,13 +138,26 @@ namespace RedirectsExercise
 		/// <param name="routeName">the route name to be added</param>
 		/// <param name="pathIndex">the index of the path where it will be added</param>
 		/// <returns>True if it is unsafe, false if it is safe</returns>
-        public bool CreatesCircularReference(string routeName, int pathIndex) {
-            if (_identifiers.Keys.Contains(routeName)) {
-                int id = _identifiers[routeName];
-                return Graph[pathIndex].Contains(_identifiers[routeName]);
-            }
-            return false;
+        public void ValidateCircularPath(string routeName, int pathIndex) {
+			if (_identifiers.ContainsKey(routeName)) {
+			   int id = _identifiers[routeName];
+				if (Graph[pathIndex].Contains(_identifiers[routeName])) {
+					throw new ArgumentException("Circular Path Detected");
+				}
+			}
         }
+
+		public void ValidateSplitPath(string routeName) {
+			if (_identifiers.ContainsKey(routeName)) {
+				int id = _identifiers[routeName];
+				foreach (List<int> paths in Graph) {
+					int idIndex = paths.IndexOf(id);
+					if (idIndex != -1 && idIndex != paths.Count - 1) {
+						throw new ArgumentException("Split Path Detected");
+					}
+				}
+			}
+		}
         
 		/// <summary>
 		/// Splits a path into a usable list
@@ -169,10 +180,15 @@ namespace RedirectsExercise
 			}
 			for (int i = 0; i < routeGraph.Graph.Count; i++) {
 				List<int> path = routeGraph.Graph[i];
-				for (int k = 0; k < path.Count; k++) {
-					if (!path[k].Equals(Graph[i][k])) {
-						return false;
+				if (path.Count == Graph[i].Count) {
+					for (int k = 0; k < path.Count; k++) {
+						if (!path[k].Equals(Graph[i][k])) {
+							return false;
+						}
 					}
+				}
+				else {
+					return false;
 				}
 			}
 			return true;

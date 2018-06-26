@@ -45,12 +45,30 @@ namespace RedirectUnitTests
         }
 
 		/// <summary>
-		/// one route with multiple reroutes, not sure if this is testing valid input
-		/// or invalid input yet, need to ask
+		/// testing if I can catch multiple routes splitting from one destination
 		/// </summary>
 		[TestMethod]
 		public void SplitRouteInputTest() {
-			TestProcessWith(shuffledInput, finishedShuffledGraph);
+			TestProcessThrowsExceptionWith(splitInput);
+		}
+
+		/// <summary>
+		/// testing If I can catch multiple routes splitting from one destination
+		/// </summary>
+		[TestMethod]
+		public void SimpleSplitRouteInputTest() {
+			TestProcessThrowsExceptionWith(simpleSplitInput);
+		}
+
+		/// <summary>
+		/// after considering the complexity of allowing two routes to merge into 
+		/// a single route, I decided not to support that feature at this time. 
+		/// Thus, I am treating two routes merging as invalid input even though
+		/// a more robust route analyzer should be able to handle it.
+		/// </summary>
+		[TestMethod]
+		public void MergedRouteInputTest() {
+			TestProcessThrowsExceptionWith(mergedInput);
 		}
 
 		/// <summary>
@@ -59,7 +77,7 @@ namespace RedirectUnitTests
 		/// </summary>
 		[TestMethod]
 		public void ProcessLargestInput() {
-			TestProcessWith(LargestTestInput, finishedLargestTestGraph);
+			TestProcessThrowsExceptionWith(LargestTestInput);
 		}
 
 		/// <summary>
@@ -76,7 +94,7 @@ namespace RedirectUnitTests
 		[TestMethod]
         public void MapPathTest() {
             RouteGraph routeGraph = new RouteGraph(midProcessGraph, midProcessIdentifiers);
-			RouteGraph testGraph = new RouteGraph(midProcessFinishedGraph, null);
+			RouteGraph testGraph = new RouteGraph(finishedMidProcessGraph, null);
 			routeGraph.MapPath("/about-us.html -> /about");
 			routeGraph.Equals(testGraph);
         }
@@ -120,7 +138,7 @@ namespace RedirectUnitTests
         public void CompareGraphs()
         {
 			RouteGraph one = new RouteGraph(finishedSampleInputGraph, null);
-			RouteGraph two = new RouteGraph(finishedLargestTestGraph, null);
+			RouteGraph two = new RouteGraph(finishedLargerInputGraph, null);
 			RouteGraph three = new RouteGraph(finishedShuffledGraph, null);
 
 			Assert.IsTrue(one.Equals(one));
@@ -137,15 +155,15 @@ namespace RedirectUnitTests
 		/// <param name="input">input to be processed</param>
 		/// <param name="output">graph to be validated</param>
         private void TestProcessWith(List<string> input, List<List<int>> output) {
+			RouteGraph routeGraph = new RouteGraph();
+			RouteGraph testGraph = new RouteGraph(output, null);
             try {
-                RouteGraph routeGraph = new RouteGraph();
-				RouteGraph testGraph = new RouteGraph(output, null);
                 routeGraph.Process(input);
-				routeGraph.Equals(testGraph);
             }
             catch (Exception exc) {
                 Assert.Fail(exc.Message);
             }
+			Assert.IsTrue(routeGraph.Equals(testGraph));
         }
 
 		/// <summary>
@@ -253,21 +271,26 @@ namespace RedirectUnitTests
 
         List<string> splitInput = new List<string>() {
             "/info -> /faq",
-            "/about-us.html -> /about -> /info",
-            "/info -> /fail",
-            "/info -> /git-gud"
+            "/about-us.html -> /info -> /about",
         };
 
-        List<List<int>> finishedSplitInput = new List<List<int>>() {
-            new List<int>() {2, 3, 0, 1, 4, 5 }
-        };
+		List<string> simpleSplitInput = new List<string>() {
+			"/info -> /faq",
+			"/info -> /about",
+		};
 
-        List<List<int>> midProcessGraph = new List<List<int>>() {
+		List<string> mergedInput = new List<string>() {
+			"/info -> /faq",
+			"/about -> /faq",
+			"/faq -> /question",
+		};
+
+		List<List<int>> midProcessGraph = new List<List<int>>() {
             new List<int>() {0,},
             new List<int>() {1, 2},
         };
 
-        List<List<int>> midProcessFinishedGraph = new List<List<int>>() {
+        List<List<int>> finishedMidProcessGraph = new List<List<int>>() {
             new List<int>() {0,},
             new List<int>() {1, 2, 3},
         };
@@ -278,18 +301,11 @@ namespace RedirectUnitTests
             "/faq -> /info",
             "/about-us.html -> /about -> /faq",
             "/our-ceo.html -> /about-us.html",
-            "/google -> /images -> /filter",
+            "/google -> /faq -> /filter",
             "/product-1.html -> /seo -> /google",
             "/faq -> /split",
-            "/info -> /fail",
-            "/info -> /git-gud"
         };
 
-        List<List<int>> finishedLargestTestGraph = new List<List<int>>() {
-            new List<int>() {3, 0, 1, 2},
-            new List<int>() {8, 6, 7, 4, 5, 14, 15, 16},
-            new List<int>() {12, 13, 9, 10, 11}
-        };
 
         List<List<int>> finishedDuplicatesGraph = new List<List<int>> {
             new List<int>() {0, 1, 2},
