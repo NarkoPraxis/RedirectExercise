@@ -5,7 +5,7 @@ using System.Linq;
 namespace RedirectsExercise
 {
 	/// <summary>
-	/// takes a list of routes and prints out teh paths in the application without any duplicates
+	/// takes a list of routes and prints out the paths in the application without any duplicates
 	/// </summary>
     public class RouteGraph : RouteAnalyzer
     {
@@ -47,6 +47,10 @@ namespace RedirectsExercise
             if (_identifiers.ContainsKey(routeNames[routeNames.Count - 1])) {
                 int id = _identifiers[routeNames[routeNames.Count - 1]];
                 int pathIndex = GetPathIndex(id);
+
+				if (Graph[pathIndex].Count > 1 && routeNames.Count > 1) {
+					ValidateMergePath(routeNames[routeNames.Count - 1]);
+				}
 
                 //add the new path to the graph
                 Graph.Add(new List<int>());
@@ -133,7 +137,7 @@ namespace RedirectsExercise
         }
         
 		/// <summary>
-		/// Test if adding a given route name to the path would create a circular reference
+		/// Test if adding a given route name to the path would create a circular path
 		/// </summary>
 		/// <param name="routeName">the route name to be added</param>
 		/// <param name="pathIndex">the index of the path where it will be added</param>
@@ -147,6 +151,10 @@ namespace RedirectsExercise
 			}
         }
 
+		/// <summary>
+		/// Test if adding a given route name to the path would create a split path
+		/// </summary>
+		/// <param name="routeName">the name of the path to be added</param>
 		public void ValidateSplitPath(string routeName) {
 			if (_identifiers.ContainsKey(routeName)) {
 				int id = _identifiers[routeName];
@@ -154,6 +162,22 @@ namespace RedirectsExercise
 					int idIndex = paths.IndexOf(id);
 					if (idIndex != -1 && idIndex != paths.Count - 1) {
 						throw new ArgumentException("Split Path Detected");
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Test if adding a give route name to the path would require managing a merged path
+		/// </summary>
+		/// <param name="routeName">the name of the path to be added</param>
+		public void ValidateMergePath(string routeName) {
+			if (_identifiers.ContainsKey(routeName)) {
+				int id = _identifiers[routeName];
+				foreach (List<int> paths in Graph) {
+					int idIndex = paths.IndexOf(id);
+					if (idIndex != -1 && idIndex == paths.Count - 1) {
+						throw new ArgumentException("Merge Path Detected");
 					}
 				}
 			}
